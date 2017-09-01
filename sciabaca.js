@@ -26,7 +26,7 @@ app.set('view engine', 'pug');
 
 let PORT = process.env["PORT"] || 3000;
 let dbConnectionURI = process.env['DATABASE_URL'] || 'sqlite:data/database.db';
-let sequelize = new Sequelize(dbConnectionURI);
+let sequelize = new Sequelize(dbConnectionURI, {logging: false});
 
 // istantiate facebook api, api token is the one of isamuni_squirrel
 let FB = new Facebook();
@@ -45,7 +45,7 @@ var Event = sequelize.define('event', {
     primaryKey: true
   },
   name: Sequelize.STRING,
-  description: Sequelize.STRING,
+  description: Sequelize.TEXT,
   start_time: Sequelize.DATE,
   end_time: Sequelize.DATE,
   updated_time: Sequelize.DATE,
@@ -62,7 +62,7 @@ var Config = sequelize.define('config', {
     type: Sequelize.STRING,
     primaryKey: true
   },
-  value: Sequelize.STRING
+  value: Sequelize.TEXT
 })
 
 // load from file the list of sources and the list of places
