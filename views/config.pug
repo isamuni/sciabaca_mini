@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+html(lang="en")
+    head
+        meta(charset="UTF-8")
+        meta(name="viewport", content="width=device-width, initial-scale=1.0")
+        meta(http-equiv="X-UA-Compatible", content="ie=edge")
+        title Sciabaca Config
+
+        script(src="/codemirror/lib/codemirror.js")
+        link(rel="stylesheet", href="/codemirror/lib/codemirror.css")
+        script(src="/codemirror/mode/javascript/javascript.js")
+        
+    body
+        h1 Sciabaca configuration
+        h3 Configuration
+        
+        form(action="/config", method="post")
+            textarea#config(name="config", cols="120", rows="90") #{config}
+            input(type="submit", value="Aggiorna config")
+
+        if message
+            p #{message}
+
+        script.
+            let configArea = document.getElementById("config");
+            let cm = CodeMirror.fromTextArea(configArea, {mode: {name:'javascript', json:'true'}})
+            cm.setSize(null, 600);
+        
