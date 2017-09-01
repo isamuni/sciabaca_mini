@@ -310,16 +310,16 @@ async function perform_crawling() {
 
 //sync db, then
 sequelize.sync().then(async function () {
+  
   await loadConfig();
+  await perform_crawling();
 
   // start server
   app.listen(PORT, function () {
     console.log('Example app listening on port ' + PORT)
   })
 
-  //crawl
-  perform_crawling();
-
   //reschedule crawling every two hours
+  //note this may not work on heroku
   setInterval(perform_crawling, 1000 * 3600 * 4);
 });

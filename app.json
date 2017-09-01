@@ -1,0 +1,14 @@
+{
+    "name": "Sciabaca",
+    "description": "A tool which aggregates events from Facebook groups and pages",
+    "success_url": "/",
+    "addons": [{
+        "plan": "heroku-postgresql:hobby-dev"
+    }],
+    "env": {
+        "FACEBOOK_API_TOKEN": {
+            "required": true,
+            "description": "TOKEN (not the api key) of your facebook application"
+        }
+    }
+}
