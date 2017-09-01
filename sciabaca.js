@@ -14,8 +14,8 @@ let configAuth = basicAuth({
   },
   challenge: true
 });
-let app = express();
 
+let app = express();
 app.use(bodyParser.urlencoded({
   extended: false
 }));
@@ -24,6 +24,7 @@ app.use(cors());
 app.set('json spaces', 2);
 app.set('view engine', 'pug');
 
+let PORT = process.env["PORT"] || 3000 ;
 let dbConnectionURI = process.env['DATABASE_URL'] || 'sqlite:data/database.db';
 console.log(dbConnectionURI);
 let sequelize = new Sequelize(dbConnectionURI);
@@ -294,8 +295,8 @@ async function perform_crawling() {
 //sync db, then
 sequelize.sync().then(function () {
   // start server
-  app.listen(3000, function () {
-    console.log('Example app listening on port 3000!')
+  app.listen(PORT, function () {
+    console.log('Example app listening on port ' + PORT )
   })
 
   //crawl
