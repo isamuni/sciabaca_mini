@@ -26,7 +26,6 @@ app.set('view engine', 'pug');
 
 let PORT = process.env["PORT"] || 3000;
 let dbConnectionURI = process.env['DATABASE_URL'] || 'sqlite:data/database.db';
-console.log(dbConnectionURI);
 let sequelize = new Sequelize(dbConnectionURI);
 
 // istantiate facebook api, api token is the one of isamuni_squirrel
@@ -250,6 +249,7 @@ app.post('/config', configAuth, async function (req, res) {
     await loadConfig();
     await crawl();
   } catch (error) {
+    console.error(error)
     message = "error " + error
   }
 
