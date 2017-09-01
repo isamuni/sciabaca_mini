@@ -24,7 +24,7 @@ app.use(cors());
 app.set('json spaces', 2);
 app.set('view engine', 'pug');
 
-let dbConnectionURI = process.env['DB_URI'] || 'sqlite:data/database.db';
+let dbConnectionURI = process.env['DATABASE_URL'] || 'sqlite:data/database.db';
 console.log(dbConnectionURI);
 let sequelize = new Sequelize(dbConnectionURI);
 
