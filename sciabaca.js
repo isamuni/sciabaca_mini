@@ -62,7 +62,7 @@ var Config = sequelize.define('config', {
     type: Sequelize.STRING,
     primaryKey: true
   },
-  value: Sequelize.JSON
+  value: Sequelize.STRING
 })
 
 // load from file the list of sources and the list of places
@@ -76,7 +76,7 @@ async function loadConfig() {
         id: 'config'
       }
     });
-    configFile = configDB.value;
+    configFile = JSON.parse(configDB.value);
   } catch (error) {
     console.error("unable to read config from database, falling back to shipped config " + error);
     configFile = JSON.parse(fs.readFileSync('./config.json'));
@@ -87,7 +87,7 @@ async function loadConfig() {
 function saveConfig(config) {
   return Config.insertOrUpdate({
     id: 'config',
-    value: config
+    value: JSON.stringify(config)
   })
 }
 
@@ -318,7 +318,6 @@ sequelize.sync().then(async function () {
   })
 
   //crawl
-
   perform_crawling();
 
   //reschedule crawling every two hours
