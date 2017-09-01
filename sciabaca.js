@@ -24,7 +24,7 @@ app.use(cors());
 app.set('json spaces', 2);
 app.set('view engine', 'pug');
 
-let PORT = process.env["PORT"] || 3000 ;
+let PORT = process.env["PORT"] || 3000;
 let dbConnectionURI = process.env['DATABASE_URL'] || 'sqlite:data/database.db';
 console.log(dbConnectionURI);
 let sequelize = new Sequelize(dbConnectionURI);
@@ -58,26 +58,42 @@ var Event = sequelize.define('event', {
   nearest_place: Sequelize.STRING
 });
 
+var Config = sequelize.define('config', {
+  id: {
+    type: Sequelize.STRING,
+    primaryKey: true
+  },
+  value: Sequelize.JSON
+})
+
 // load from file the list of sources and the list of places
 let config = {}
 
-function loadConfig() {
+async function loadConfig() {
   let configFile;
   try {
-    configFile = JSON.parse(fs.readFileSync('./data/config.json'));
+    let configDB = await Config.find({
+      where: {
+        id: 'config'
+      }
+    });
+    configFile = configDB.value;
   } catch (error) {
-    console.error("unable to read data/config.json, falling back to shipped config");
+    console.error("unable to read config from database, falling back to shipped config " + error);
     configFile = JSON.parse(fs.readFileSync('./config.json'));
   }
   config.sources = configFile.sources;
 }
 
 function saveConfig(config) {
-  fs.writeFileSync('data/config.json', JSON.stringify(config, null, 2));
+  return Config.insertOrUpdate({
+    id: 'config',
+    value: config
+  })
 }
 
 const capoluoghi = require('./capoluoghi.json');
-loadConfig();
+
 // Helper functions
 /////////////////////
 
@@ -230,8 +246,8 @@ app.post('/config', configAuth, async function (req, res) {
   let message = "success";
 
   try {
-    saveConfig(JSON.parse(req.body.config));
-    loadConfig();
+    await saveConfig(JSON.parse(req.body.config));
+    await loadConfig();
     await crawl();
   } catch (error) {
     message = "error " + error
@@ -293,16 +309,18 @@ async function perform_crawling() {
 ////////////////////////////////////////////
 
 //sync db, then
-sequelize.sync().then(function () {
+sequelize.sync().then(async function () {
+  await loadConfig();
+
   // start server
   app.listen(PORT, function () {
-    console.log('Example app listening on port ' + PORT )
+    console.log('Example app listening on port ' + PORT)
   })
 
   //crawl
 
-  //perform_crawling();
+  perform_crawling();
 
   //reschedule crawling every two hours
-  //setInterval(perform_crawling, 1000 * 3600 * 4);
+  setInterval(perform_crawling, 1000 * 3600 * 4);
 });
