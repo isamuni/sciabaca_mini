@@ -9,6 +9,10 @@
         "FACEBOOK_API_TOKEN": {
             "required": true,
             "description": "TOKEN (not the api key) of your facebook application"
+        },
+        "ADMIN_PASS": {
+            "description": "Password for the /config section (user is 'admin'",
+            "value": "password"
         }
     }
 }
