@@ -14,6 +14,9 @@ let configAuth = basicAuth({
   },
   challenge: true
 });
+let ical = require('ical-generator');
+var moment = require('moment');
+require("moment/min/locales.min");
 
 let app = express();
 app.use(bodyParser.urlencoded({
@@ -54,7 +57,8 @@ var Event = sequelize.define('event', {
   longitude: Sequelize.STRING,
   parent_group: Sequelize.JSON,
   owner: Sequelize.JSON,
-  nearest_place: Sequelize.STRING
+  nearest_place: Sequelize.STRING,
+  url: Sequelize.STRING
 });
 
 var Config = sequelize.define('config', {
@@ -81,7 +85,10 @@ async function loadConfig() {
     console.error("unable to read config from database, falling back to shipped config " + error);
     configFile = JSON.parse(fs.readFileSync('./config.json'));
   }
-  config.sources = configFile.sources;
+  
+  for(let i in configFile){
+    config[i] = configFile[i];
+  }
 }
 
 function saveConfig(config) {
@@ -98,6 +105,9 @@ const capoluoghi = require('./capoluoghi.json');
 
 function nearestPlace(lat, lon) {
   //finds place nearest to some given coordinates
+  if(!config.aggregate_places){
+    return null;
+  }
 
   let nearestP = capoluoghi[0];
   let nearestDistance = 10000000000;
@@ -123,6 +133,10 @@ function getRequestObj(url) {
     method: 'get',
     relative_url: url
   }
+}
+
+function eventURLFromID(id){
+  return `https://www.facebook.com/events/${id}`;
 }
 
 function eventIDFromLink(link) {
@@ -204,7 +218,9 @@ async function crawl() {
 
     if (e.place && e.place.location) {
       let p = e.place.location;
-      e.nearest_place = nearestPlace(p.latitude, p.longitude)[0];
+      let np = nearestPlace(p.latitude, p.longitude);
+      if (np)
+        e.nearest_place = np[0];
     } else {
       console.warn("event without place or location", e);
     }
@@ -213,6 +229,7 @@ async function crawl() {
     //e.owner = JSON.stringify(e.owner);
     //e.parent_group = JSON.stringify(e.parent_group);
 
+    e.url = eventURLFromID(i);
     processedEvents.push(e);
   }
 
@@ -259,7 +276,51 @@ app.post('/config', configAuth, async function (req, res) {
   });
 })
 
-app.get('/', async function (req, res) {
+app.get('/', async function(req,res){
+  moment.locale(config.locale);
+
+  let query = {
+    where: {
+      end_time: {
+        $gt: new Date()
+      }
+    }
+  };
+
+  let events = await Event.findAll(query)
+  res.render("index", {
+    events, config, moment
+  });
+});
+
+app.get('/ical', async function(req,res){
+  let query = {
+    where: {
+      end_time: {
+        $gt: new Date()
+      }
+    }
+  };
+
+  let events = await Event.findAll(query)
+
+  let cal = ical({name: config.calendar_name, domain: config.domain, timezone: 'Europe/Rome'})
+
+  for(let e of events){
+    cal.createEvent({
+      start: e.start_time,
+      end: e.end_time,
+      summary: e.name,
+      description: e.description,
+      location: e.place.name,
+      url: e.url
+    });
+  }
+
+  cal.serve(res);
+});
+
+app.get('/json', async function (req, res) {
   let query = {
     where: {
       start_time: {

@@ -1,4 +1,10 @@
 {
+  "domain": "sciabaca",
+  "calendar_name": "sciabaca",
+  "title": "Sciabaca",
+  "subtitle": "Un aggregatore di eventi",
+  "locale": "it",
+  "aggregate_places": false,
   "sources": {
     "fb": {
       "groups": [{

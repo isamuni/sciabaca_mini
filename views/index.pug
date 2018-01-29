@@ -1,0 +1,33 @@
+doctype html
+html
+  head
+    meta(charset='utf-8')
+    meta(name='viewport', content='width=device-width, initial-scale=1')
+    title #{config.calendar_name}
+    link(rel='stylesheet', href='https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css')
+    script(defer='', src='https://use.fontawesome.com/releases/v5.0.0/js/all.js')
+  body
+    section.section
+      .container
+        h1.title
+          | #{config.title}
+        p.subtitle
+          | #{config.subtitle} 
+          a(href="/ical")
+            | (ical)
+
+        each event in events
+            .box
+                article.media
+                    .media-content
+                    .content
+                      p
+                        a(href=event.url)
+                          strong #{event.name}
+                        small 
+                          | - #{moment(event.start_time).format('LLL')}
+                        br
+                        small
+                          | @#{event.place.name}, organizzato da #{event.owner.name} 
+                        br
+                        | #{event.description}

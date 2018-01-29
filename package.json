@@ -16,6 +16,8 @@
     "express-basic-auth": "^1.1.2",
     "fb": "^2.0.0",
     "geolib": "^2.0.23",
+    "ical-generator": "^0.2.10",
+    "moment": "^2.20.1",
     "pg": "6.4.2",
     "pug": "^2.0.0-rc.3",
     "sequelize": "^4.8.0",
