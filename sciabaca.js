@@ -85,7 +85,7 @@ async function loadConfig() {
     console.error("unable to read config from database, falling back to shipped config " + error);
     configFile = JSON.parse(fs.readFileSync('./config.json'));
   }
-  
+
   for(let i in configFile){
     config[i] = configFile[i];
   }
@@ -284,7 +284,8 @@ app.get('/', async function(req,res){
       end_time: {
         $gt: new Date()
       }
-    }
+    },
+    order: sequelize.col('start_time')
   };
 
   let events = await Event.findAll(query)
