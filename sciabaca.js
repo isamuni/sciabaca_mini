@@ -181,6 +181,11 @@ async function crawl() {
   let page_events_replies = await sendRequestsBatch(page_requests);
   for (const reply of page_events_replies) {
     let events_in_page = JSON.parse(reply.body);
+    if(!events_in_page.data){
+      console.error("error loading events from a page:");
+      console.error(events_in_page);
+      continue;
+    }
     for (const event of events_in_page.data) {
       events[event.id] = event;
     }
@@ -267,7 +272,7 @@ app.post('/config', configAuth, async function (req, res) {
     await crawl();
   } catch (error) {
     console.error(error)
-    message = "error " + error
+    message = "error " + error.message
   }
 
   res.render("config", {
