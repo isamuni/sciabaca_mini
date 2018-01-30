@@ -21,8 +21,24 @@ html(lang="en")
         if message
             p #{message}
 
+        p
+            button#resetdb Reset Database
+
         script.
             let configArea = document.getElementById("config");
             let cm = CodeMirror.fromTextArea(configArea, {mode: {name:'javascript', json:'true'}})
             cm.setSize(null, 600);
+
+            document.getElementById("resetdb").addEventListener("click", function(){
+                if(window.confirm("Delete all events in the database?")){
+                    fetch("/config/reset", {
+                        method: 'POST',
+                        credentials: 'same-origin'
+                    }).then(response => response.text()).then((data) =>{
+                        alert(data);
+                    }).catch( () => {
+                        alert("error resetting the database");
+                    })
+                }
+            })
         

@@ -98,6 +98,10 @@ function saveConfig(config) {
   })
 }
 
+function emptyDatabase(){
+  return Event.destroy({where:{}})
+}
+
 const capoluoghi = require('./capoluoghi.json');
 
 // Helper functions
@@ -255,6 +259,11 @@ async function crawl() {
 
 // Webserver logic
 ////////////////////////////////////////////////
+
+app.post('/config/reset', configAuth, async function(req,res){
+  await emptyDatabase();
+  res.send("done");
+})
 
 app.get('/config', configAuth, function (req, res) {
   res.render("config", {
