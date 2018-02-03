@@ -427,7 +427,7 @@ sequelize.sync().then(async function () {
     console.log('Sciabaca listening on port ' + PORT)
   })
 
-  //reschedule crawling every two hours
+  //reschedule crawling every hour
   //note this may not work on heroku
-  setInterval(perform_crawling, 1000 * 3600 * 4);
+  setInterval(perform_crawling, 1000 * 60 * 60);
 });
