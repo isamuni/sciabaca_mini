@@ -2,6 +2,7 @@ let fs = require('fs');
 var express = require('express');
 let geolib = require("geolib");
 let Sequelize = require('sequelize');
+const Op = Sequelize.Op
 let {
   Facebook
 } = require('fb');
@@ -39,7 +40,7 @@ if (FBTOKEN) {
 }
 
 // event fields to fetch from facebook
-const EVENT_FIELDS = "id,name,description,start_time,end_time,updated_time,place,parent_group,owner";
+const EVENT_FIELDS = "id,name,description,start_time,end_time,updated_time,place,parent_group,owner,event_times";
 
 // schema definition of our database
 var Event = sequelize.define('event', {
@@ -58,7 +59,9 @@ var Event = sequelize.define('event', {
   parent_group: Sequelize.JSON,
   owner: Sequelize.JSON,
   nearest_place: Sequelize.STRING,
-  url: Sequelize.STRING
+  url: Sequelize.STRING,
+  source_site: Sequelize.STRING,
+  crawling_time: Sequelize.DATE,
 });
 
 var Config = sequelize.define('config', {
@@ -171,6 +174,7 @@ function sendRequestsBatch(batch) {
 
 async function crawl() {
   console.log("crawling");
+  const crawlingTime = new Date();
 
   let page_requests = config.sources.fb.pages
     .map(p => getRequestObj(`/${p.id}/events?fields=${EVENT_FIELDS}`))
@@ -238,16 +242,41 @@ async function crawl() {
     //e.owner = JSON.stringify(e.owner);
     //e.parent_group = JSON.stringify(e.parent_group);
 
+    e.source_site = "facebook";
     e.url = eventURLFromID(i);
-    processedEvents.push(e);
+    e.crawling_time = crawlingTime;
+
+    if (e.event_times){
+      //it is a nested event
+      for(let subevent of e.event_times) {
+        e.id = subevent.id;
+        e.start_time = subevent.start_time;
+        e.end_time = subevent.end_time;
+        processedEvents.push(e);
+      }
+    } else {
+      processedEvents.push(e);
+    }
+
   }
 
   //Destroy events we are about to re-insert
+  //Or new events from facebook (assuming they have been cancelled)
   await Event.destroy({
     where: {
-      id: {
-        $in: processedEvents.map(ev => ev.id)
-      }
+      [Sequelize.Op.or]: [
+        {
+          start_time: {
+            [Op.gt]: new Date()
+          },
+          source_site: "facebook"
+        },
+        {
+          id: {
+            [Op.in]: processedEvents.map(ev => ev.id)
+          }
+        }
+      ]
     }
   });
 
@@ -296,7 +325,7 @@ app.get('/', async function(req,res){
   let query = {
     where: {
       end_time: {
-        $gt: new Date()
+        [Op.gt]: new Date()
       }
     },
     order: sequelize.col('start_time')
@@ -312,7 +341,7 @@ app.get('/ical', async function(req,res){
   let query = {
     where: {
       end_time: {
-        $gt: new Date()
+        [Op.gt]: new Date()
       }
     }
   };
@@ -339,21 +368,21 @@ app.get('/json', async function (req, res) {
   let query = {
     where: {
       start_time: {
-        $gt: new Date()
+        [Op.gt]: new Date()
       }
     }
   };
 
   if (req.query.places) {
     query.where.nearest_place = {
-      $in: eq.query.places.split(",")
+      [Op.in]: eq.query.places.split(",")
     }
   }
 
   let event_places_count = await Event.findAll({
     where: {
       start_time: {
-        $gt: new Date()
+        [Op.gt]: new Date()
       }
     },
     attributes: ['nearest_place', [sequelize.fn('COUNT', sequelize.col('id')), 'events']],
@@ -392,7 +421,7 @@ sequelize.sync().then(async function () {
 
   // start server
   app.listen(PORT, function () {
-    console.log('Example app listening on port ' + PORT)
+    console.log('Sciabaca listening on port ' + PORT)
   })
 
   //reschedule crawling every two hours

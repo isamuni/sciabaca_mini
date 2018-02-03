@@ -20,7 +20,7 @@
     "moment": "^2.20.1",
     "pg": "6.4.2",
     "pug": "^2.0.0-rc.3",
-    "sequelize": "^4.8.0",
+    "sequelize": "^4.32.6",
     "sequelize-cli": "^2.5.1",
     "sqlite3": "^3.1.9"
   },
