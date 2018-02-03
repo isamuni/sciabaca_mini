@@ -30,7 +30,7 @@ app.set('view engine', 'pug');
 
 let PORT = process.env["PORT"] || 3000;
 let dbConnectionURI = process.env['DATABASE_URL'] || 'sqlite:data/database.db';
-let sequelize = new Sequelize(dbConnectionURI, {logging: false});
+let sequelize = new Sequelize(dbConnectionURI);
 
 // istantiate facebook api, api token is the one of isamuni_squirrel
 let FB = new Facebook();
@@ -232,10 +232,11 @@ async function crawl() {
     if (e.place && e.place.location) {
       let p = e.place.location;
       let np = nearestPlace(p.latitude, p.longitude);
-      if (np)
+      if (np){
         e.nearest_place = np[0];
+      }
     } else {
-      console.warn("event without place or location", e);
+      //console.warn("event without place or location", e);
     }
 
     //e.place = JSON.stringify(e.place);
@@ -249,22 +250,24 @@ async function crawl() {
     if (e.event_times){
       //it is a nested event
       for(let subevent of e.event_times) {
-        e.id = subevent.id;
-        e.start_time = subevent.start_time;
-        e.end_time = subevent.end_time;
-        processedEvents.push(e);
+        //replace id, start_time and end_time
+        //warning: mind it's a shallow copy, but it's enough
+        let clonedEvent = Object.assign({}, e);
+        clonedEvent.id = subevent.id;
+        clonedEvent.start_time = subevent.start_time;
+        clonedEvent.end_time = subevent.end_time;
+        processedEvents.push(clonedEvent);
       }
     } else {
       processedEvents.push(e);
     }
-
   }
 
   //Destroy events we are about to re-insert
   //Or new events from facebook (assuming they have been cancelled)
   await Event.destroy({
     where: {
-      [Sequelize.Op.or]: [
+      [Op.or]: [
         {
           start_time: {
             [Op.gt]: new Date()
