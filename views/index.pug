@@ -5,28 +5,42 @@ html
     meta(name='viewport', content='width=device-width, initial-scale=1')
     title #{config.calendar_name}
     link(rel='stylesheet', href='https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.2/css/bulma.min.css')
+    link(rel='stylesheet', href='https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.8.2/fullcalendar.min.css')
+    link(rel='stylesheet', media='print' href='https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.8.2/fullcalendar.print.css')
     script(defer='', src='https://use.fontawesome.com/releases/v5.0.0/js/all.js')
+    script(defer='', src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js')
+    script(defer='', src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.20.1/moment.min.js')
+    script(defer='', src='https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.8.2/fullcalendar.min.js')
+    script(defer='' src='/main.js')
+    style.
+        #calendar {
+          margin-bottom: 30px;
+        }
   body
     section.section
       .container
         h1.title
           | #{config.title}
         p.subtitle
-          | #{config.subtitle} 
-          a(href="/ical")
-            | (ical)
-
-        each event in events
-            .box
-                article.media
-                    .content
-                      p
-                        a(href=event.url)
-                          strong #{event.name}
-                        small 
-                          | - #{moment(event.start_time).format('LLL')}
-                        br
-                        small
-                          | @#{event.place.name}, organizzato da #{event.owner.name} 
-                        br
-                        | #{event.description}
+          | #{config.subtitle} (
+          a(href="/ical") ical, 
+          a(href="json") json
+          | )
+        #calendar
+        #events
+          h3(class='title is-3') Tutti gli eventi
+          each event in events
+              .box.event(id=event.id)
+                  article.media
+                      .content
+                        p
+                          a(href=event.url)
+                            strong #{event.name}
+                          small 
+                            | - #{moment(event.start_time).format('LLL')}
+                          br
+                          small
+                            | @#{event.place.name}, organizzato da #{event.owner.name} 
+                          br
+                          | #{event.description}
+    script
