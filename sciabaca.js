@@ -3,9 +3,7 @@ var express = require('express');
 let geolib = require("geolib");
 let Sequelize = require('sequelize');
 const Op = Sequelize.Op
-let {
-  Facebook
-} = require('fb');
+let { Facebook } = require('fb');
 let cors = require('cors');
 let basicAuth = require('express-basic-auth');
 let bodyParser = require('body-parser')
@@ -20,9 +18,7 @@ var moment = require('moment');
 require("moment/min/locales.min");
 
 let app = express();
-app.use(bodyParser.urlencoded({
-  extended: false
-}));
+app.use(bodyParser.urlencoded({extended: false}));
 app.use(express.static('public'))
 app.use(cors());
 app.set('json spaces', 2);
@@ -134,17 +130,6 @@ function nearestPlace(lat, lon) {
   return nearestP;
 }
 
-function getRequestObj(url) {
-  // makes an object representing a get request
-  return {
-    method: 'get',
-    relative_url: url
-  }
-}
-
-function eventURLFromID(id){
-  return `https://www.facebook.com/events/${id}`;
-}
 
 function eventIDFromLink(link) {
   // extracts an event's id given its facebook link
@@ -169,8 +154,25 @@ function sendRequestsBatch(batch) {
   });
 }
 
+const QUERY_FUTURE_EVENTS = {
+  where: {
+    [Op.or] : [
+      {
+        end_time: { [Op.gt]: new Date() }
+      },
+      {
+        start_time: { [Op.gt]: new Date() }
+      }
+    ]
+  },
+  order: sequelize.col('start_time')
+};
+
 // Main Crawling Function (async)
 /////////////////////////////////
+
+const getRequestObj = (url) => ({method:'get', relative_url: url});
+const eventURLFromID = (id) => `https://www.facebook.com/events/${id}`;
 
 async function crawl() {
   console.log("crawling");
@@ -269,9 +271,7 @@ async function crawl() {
     where: {
       [Op.or]: [
         {
-          start_time: {
-            [Op.gt]: new Date()
-          },
+          start_time: { [Op.gt]: new Date() },
           source_site: "facebook"
         },
         {
@@ -325,32 +325,13 @@ app.post('/config', configAuth, async function (req, res) {
 app.get('/', async function(req,res){
   moment.locale(config.locale);
 
-  let query = {
-    where: {
-      end_time: {
-        [Op.gt]: new Date()
-      }
-    },
-    order: sequelize.col('start_time')
-  };
-
-  let events = await Event.findAll(query)
-  res.render("index", {
-    events, config, moment
-  });
+  let events = await Event.findAll(QUERY_FUTURE_EVENTS)
+  res.render("index", { events, config, moment });
 });
 
 app.get('/ical', async function(req,res){
-  let query = {
-    where: {
-      end_time: {
-        [Op.gt]: new Date()
-      }
-    }
-  };
 
-  let events = await Event.findAll(query)
-
+  let events = await Event.findAll(QUERY_FUTURE_EVENTS)
   let cal = ical({name: config.calendar_name, domain: config.domain, timezone: 'Europe/Rome'})
 
   for(let e of events){
@@ -368,13 +349,9 @@ app.get('/ical', async function(req,res){
 });
 
 app.get('/json', async function (req, res) {
-  let query = {
-    where: {
-      start_time: {
-        [Op.gt]: new Date()
-      }
-    }
-  };
+  let query = {};
+  query.order = QUERY_FUTURE_EVENTS.order;
+  query.where = Object.assign({}, QUERY_FUTURE_EVENTS.where);
 
   if (req.query.places) {
     query.where.nearest_place = {
@@ -383,11 +360,7 @@ app.get('/json', async function (req, res) {
   }
 
   let event_places_count = await Event.findAll({
-    where: {
-      start_time: {
-        [Op.gt]: new Date()
-      }
-    },
+    where: QUERY_FUTURE_EVENTS.where,
     attributes: ['nearest_place', [sequelize.fn('COUNT', sequelize.col('id')), 'events']],
     group: ['nearest_place']
   });
