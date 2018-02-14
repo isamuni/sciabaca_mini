@@ -40,7 +40,10 @@ html
                             | - #{moment(event.start_time).format('LLL')}
                           br
                           small
-                            | @#{event.place.name}, organizzato da #{event.owner.name} 
+                            if event.place
+                              | @#{event.place.name}, 
+                            if event.owner
+                              | organizzato da #{event.owner.name} 
                           br
                           | #{event.description}
     script
