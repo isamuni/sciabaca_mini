@@ -24,11 +24,17 @@ app.use(cors());
 app.set('json spaces', 2);
 app.set('view engine', 'pug');
 
+const handleErr = fn =>
+  (req, res, next) => {
+    Promise.resolve(fn(req, res, next))
+      .catch(next);
+  };
+
 let PORT = process.env["PORT"] || 3000;
 let dbConnectionURI = process.env['DATABASE_URL'] || 'sqlite:data/database.db';
 let sequelize = new Sequelize(dbConnectionURI);
 
-// istantiate facebook api, api token is the one of isamuni_squirrel
+// instantiate facebook api
 let FB = new Facebook();
 let FBTOKEN = process.env["FACEBOOK_API_TOKEN"];
 if (FBTOKEN) {
@@ -223,7 +229,7 @@ async function crawl() {
     if (event && event.id)
       events[event.id] = event;
     else
-      console.error("unkown error with event", event);
+      console.error("unknown error with event", event);
   }
 
   //postprocessing events
@@ -292,16 +298,16 @@ async function crawl() {
 // Webserver logic
 ////////////////////////////////////////////////
 
-app.post('/config/reset', configAuth, async function(req,res){
+app.post('/config/reset', configAuth, handleErr(async function(req,res){
   await emptyDatabase();
   res.send("done");
-})
+}));
 
 app.get('/config', configAuth, function (req, res) {
   res.render("config", {
     config: JSON.stringify(config, null, 2)
   })
-})
+});
 
 app.post('/config', configAuth, async function (req, res) {
 
@@ -320,35 +326,36 @@ app.post('/config', configAuth, async function (req, res) {
     config: JSON.stringify(config, null, 2),
     message: message
   });
-})
+});
 
-app.get('/', async function(req,res){
+app.get('/', handleErr(async function(req,res){
   moment.locale(config.locale);
 
   let events = await Event.findAll(QUERY_FUTURE_EVENTS)
   res.render("index", { events, config, moment });
-});
+}));
 
-app.get('/ical', async function(req,res){
+app.get('/ical', handleErr(async function(req,res){
 
   let events = await Event.findAll(QUERY_FUTURE_EVENTS)
   let cal = ical({name: config.calendar_name, domain: config.domain, timezone: 'Europe/Rome'})
-
+  
   for(let e of events){
+    const placeName = e.place? e.place.name : "" ;
     cal.createEvent({
       start: e.start_time,
       end: e.end_time,
       summary: e.name,
       description: e.description,
-      location: e.place.name,
+      location: placeName,
       url: e.url
     });
   }
 
   cal.serve(res);
-});
+}));
 
-app.get('/json', async function (req, res) {
+app.get('/json', handleErr(async function (req, res) {
   let query = {};
   query.order = QUERY_FUTURE_EVENTS.order;
   query.where = Object.assign({}, QUERY_FUTURE_EVENTS.where);
@@ -372,7 +379,7 @@ app.get('/json', async function (req, res) {
   });
 
   //res.render('index', {events: events, event_places_count: event_places_count});
-})
+}));
 
 async function perform_crawling() {
   try {
