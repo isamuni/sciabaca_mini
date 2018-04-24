@@ -1,6 +1,14 @@
+### Description
+
 Sciabaca_mini is a small application which aggregates events from facebook pages and groups
 
 This app is still under active development, so you may want to fork it.
+
+### Warning: This does no longer work 
+
+This does no longer work because of changes to facebook graph API, requiring manual approval to access the posts of a group or the events of a page. It's unclear if FB APIs will change again at a later time.
+
+### Deploy
 
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 

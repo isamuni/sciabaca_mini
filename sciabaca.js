@@ -30,6 +30,10 @@ const handleErr = fn =>
       .catch(next);
   };
 
+if (!fs.existsSync('data')){
+  fs.mkdirSync('data');
+}
+
 let PORT = process.env["PORT"] || 3000;
 let dbConnectionURI = process.env['DATABASE_URL'] || 'sqlite:data/database.db';
 let sequelize = new Sequelize(dbConnectionURI);
@@ -209,15 +213,20 @@ async function crawl() {
 
   //take events from groups (only ids)
   let feed_replies = await sendRequestsBatch(group_requests);
-  for (const reply of feed_replies) {
+  feed_replies.forEach((reply, index) => {
+    const group = config.sources.fb.groups[index];
     let feed = JSON.parse(reply.body);
+    if(!feed.data){
+      console.warn("received no feed for group " + group.name);
+      return;
+    }
     for (const post of feed.data) {
       if (post.type == "event") {
         let postid = eventIDFromLink(post.link);
         if (!events[postid]) events[postid] = null;
       }
     }
-  }
+  })
 
   //take remaining events
   let event_requests = Object.keys(events).filter(i => events[i] == null)
