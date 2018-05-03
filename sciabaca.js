@@ -3,10 +3,16 @@ var express = require('express');
 let geolib = require("geolib");
 let Sequelize = require('sequelize');
 const Op = Sequelize.Op
-let { Facebook } = require('fb');
+
 let cors = require('cors');
 let basicAuth = require('express-basic-auth');
-let bodyParser = require('body-parser')
+let bodyParser = require('body-parser');
+
+let { Facebook } = require('fb');
+
+const fb_mbasic = require("./lib/fb_mbasic");
+const _fb_api = require("./lib/fb_api");
+
 let configAuth = basicAuth({
   users: {
     admin: process.env['ADMIN_PASS'] || "password"
@@ -44,9 +50,9 @@ let FBTOKEN = process.env["FACEBOOK_API_TOKEN"];
 if (FBTOKEN) {
   FB.setAccessToken(FBTOKEN);
 }
+const fb_api = new _fb_api.FBApi(FB);
 
 // event fields to fetch from facebook
-const EVENT_FIELDS = "id,name,description,start_time,end_time,updated_time,place,parent_group,owner,event_times";
 
 // schema definition of our database
 var Event = sequelize.define('event', {
@@ -141,29 +147,6 @@ function nearestPlace(lat, lon) {
 }
 
 
-function eventIDFromLink(link) {
-  // extracts an event's id given its facebook link
-
-  let res = /www.facebook.com\/events\/(\d+)/.exec(link)
-  if (res) return res[1];
-}
-
-function sendRequestsBatch(batch) {
-  // makes a call to facebook's api, executing various requests in batch
-
-  return new Promise(function (resolve, reject) {
-    FB.api('', 'post', {
-      batch: batch
-    }, function (res) {
-      if (!res || res.error) {
-        reject(res.error);
-      } else {
-        resolve(res);
-      }
-    });
-  });
-}
-
 const QUERY_FUTURE_EVENTS = {
   where: {
     [Op.or] : [
@@ -178,68 +161,28 @@ const QUERY_FUTURE_EVENTS = {
   order: sequelize.col('start_time')
 };
 
+function mergeSets(arrayOfSets){
+  let res = new Set();
+  for(let set of arrayOfSets){
+    for(let i of set.values()){
+      res.add(i);
+    }
+  }
+  return res;
+}
+
 // Main Crawling Function (async)
 /////////////////////////////////
 
-const getRequestObj = (url) => ({method:'get', relative_url: url});
-const eventURLFromID = (id) => `https://www.facebook.com/events/${id}`;
 
 async function crawl() {
   console.log("crawling");
   const crawlingTime = new Date();
 
-  let page_requests = config.sources.fb.pages
-    .map(p => getRequestObj(`/${p.id}/events?fields=${EVENT_FIELDS}`))
-
-  let group_requests = config.sources.fb.groups
-    .map(g => getRequestObj(`/${g.id}/feed?limit=100&fields=link,type`));
-
-  //resulting event map, indexed by ID
-  let events = Object.create(null);
-
-  //take events from pages
-  let page_events_replies = await sendRequestsBatch(page_requests);
-  for (const reply of page_events_replies) {
-    let events_in_page = JSON.parse(reply.body);
-    if(!events_in_page.data){
-      console.error("error loading events from a page:");
-      console.error(events_in_page);
-      continue;
-    }
-    for (const event of events_in_page.data) {
-      events[event.id] = event;
-    }
-  }
-
-  //take events from groups (only ids)
-  let feed_replies = await sendRequestsBatch(group_requests);
-  feed_replies.forEach((reply, index) => {
-    const group = config.sources.fb.groups[index];
-    let feed = JSON.parse(reply.body);
-    if(!feed.data){
-      console.warn("received no feed for group " + group.name);
-      return;
-    }
-    for (const post of feed.data) {
-      if (post.type == "event") {
-        let postid = eventIDFromLink(post.link);
-        if (!events[postid]) events[postid] = null;
-      }
-    }
-  })
-
-  //take remaining events
-  let event_requests = Object.keys(events).filter(i => events[i] == null)
-    .map(i => getRequestObj(`/${i}?fields=${EVENT_FIELDS}`))
-
-  let events_replies = await sendRequestsBatch(event_requests);
-  for (const reply of events_replies) {
-    let event = JSON.parse(reply.body);
-    if (event && event.id)
-      events[event.id] = event;
-    else
-      console.error("unknown error with event", event);
-  }
+  let pageIDPromises = config.sources.fb.pages.map(p => fb_mbasic.getEventIDs(p.id));
+  let idsForPages = await Promise.all(pageIDPromises);
+  let ids = mergeSets(idsForPages);
+  let events = await fb_api.getEvents(ids.values());
 
   //postprocessing events
   let processedEvents = [];
